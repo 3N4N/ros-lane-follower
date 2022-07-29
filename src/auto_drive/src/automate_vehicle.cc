@@ -16,10 +16,11 @@ cv::Point prev_pt[2];
 cv::Point centroid[2];
 cv::Point frame_pt;
 
-int minlb[2];
 double threshdistance[2];
 std::vector<double> dist[2];
 int error;
+
+double PI = atan(1)*4;
 
 void imageCallback(const sensor_msgs::ImageConstPtr &msg)
 {
@@ -53,21 +54,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
       }
     }
 
-    for (int j = 0; j < 2; j++) {
-      threshdistance[j] = *min_element(dist[j].begin(), dist[j].end());
-    }
-
-    // don't consider lines too far away
-    // most likely they are not the one we were following
-
     for (int i = 0; i < 2; i++) {
-      if (threshdistance[i] > 100) {
-        centroid[i] = prev_pt[i];
-      } else {
-        minlb[i] = min_element(dist[i].begin(), dist[i].end()) - dist[i].begin();
-        centroid[i] = cv::Point2d(centroids.at<double>(minlb[i] + 1, 0),
-                                  centroids.at<double>(minlb[i] + 1, 1));
-      }
+      int idx = min_element(dist[i].begin(), dist[i].end()) - dist[i].begin() + 1;
+      centroid[i] = cv::Point2d(centroids.at<double>(idx, 0),
+                                centroids.at<double>(idx, 1));
       dist[i].clear();
     }
   } else {
@@ -96,15 +86,15 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
 
   geometry_msgs::Twist cmd_vel;
   cmd_vel.linear.x = 0.5;
-  cmd_vel.angular.z = (error*90.0/400)/15;
+  cmd_vel.angular.z = (error*PI/frame.cols);
 
   pub.publish(cmd_vel);
 }
 
 int main(int argc, char **argv)
 {
-  prev_pt[0] = cv::Point(110, 60);
-  prev_pt[1] = cv::Point(620, 60);
+  prev_pt[0] = cv::Point(250, 60);
+  prev_pt[1] = cv::Point(650, 60);
 
   ros::init(argc, argv, AUTOMATE_VEHICLE);
   ros::NodeHandle nodeHandle;
