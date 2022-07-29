@@ -8,7 +8,6 @@ find_package(catkin REQUIRED
   rospy
   std_msgs
   sensor_msgs
-  auto_drive_msgs
   genmsg
   cv_bridge
   image_transport
@@ -21,7 +20,7 @@ find_package(OpenCV 4.2.0 REQUIRED)
 ## Declare a catkin package
 catkin_package(INCLUDE_DIRS inc
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS auto_drive_msgs roscpp
+  CATKIN_DEPENDS roscpp
   DEPENDS OpenCV
 )
 
