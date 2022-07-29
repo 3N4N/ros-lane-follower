@@ -12,14 +12,13 @@ const std::string TOPIC_CMDVEL = "vehicle/cmd_vel";
 
 ros::Publisher pub;
 
-cv::Point prevpt1;
-cv::Point prevpt2;
+cv::Point prev_pt[2];
 cv::Point centroid[2];
-cv::Point fpt;
+cv::Point frame_pt;
+
 int minlb[2];
 double threshdistance[2];
-std::vector<double> dis1;
-std::vector<double> dis2;
+std::vector<double> dist[2];
 int error;
 
 void imageCallback(const sensor_msgs::ImageConstPtr &msg)
@@ -49,51 +48,47 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   if (cnt > 1) {
     for (int i = 1; i < cnt; i++) {
       double *p = centroids.ptr<double>(i);
-      dis1.push_back(abs(p[0] - prevpt1.x));
-      dis2.push_back(abs(p[0] - prevpt2.x));
+      for (int j = 0; j < 2; j++) {
+        dist[j].push_back(abs(p[0] - prev_pt[j].x));
+      }
     }
 
-    threshdistance[0] = *min_element(dis1.begin(), dis1.end());
-    threshdistance[1] = *min_element(dis2.begin(), dis2.end());
+    for (int j = 0; j < 2; j++) {
+      threshdistance[j] = *min_element(dist[j].begin(), dist[j].end());
+    }
 
     // don't consider lines too far away
     // most likely they are not the one we were following
 
-    if (threshdistance[0] > 100) {
-      centroid[0] = prevpt1;
-    } else {
-      minlb[0] = min_element(dis1.begin(), dis1.end()) - dis1.begin();
-      centroid[0] = cv::Point2d(centroids.at<double>(minlb[0] + 1, 0),
-                                centroids.at<double>(minlb[0] + 1, 1));
+    for (int i = 0; i < 2; i++) {
+      if (threshdistance[i] > 100) {
+        centroid[i] = prev_pt[i];
+      } else {
+        minlb[i] = min_element(dist[i].begin(), dist[i].end()) - dist[i].begin();
+        centroid[i] = cv::Point2d(centroids.at<double>(minlb[i] + 1, 0),
+                                  centroids.at<double>(minlb[i] + 1, 1));
+      }
+      dist[i].clear();
     }
-
-    if (threshdistance[1] > 100) {
-      centroid[1] = prevpt2;
-    } else {
-      minlb[1] = min_element(dis2.begin(), dis2.end()) - dis2.begin();
-      centroid[1] = cv::Point2d(centroids.at<double>(minlb[1] + 1, 0),
-                                centroids.at<double>(minlb[1] + 1, 1));
-    }
-
-    dis1.clear();
-    dis2.clear();
   } else {
-    centroid[0] = prevpt1;
-    centroid[1] = prevpt2;
+    for (int i = 0; i < 2; i++) {
+      centroid[i] = prev_pt[i];
+    }
   }
 
-  prevpt1 = centroid[0];
-  prevpt2 = centroid[1];
+  for (int i = 0; i < 2; i++) {
+    prev_pt[i] = centroid[i];
+  }
 
-  fpt.x = (centroid[0].x + centroid[1].x) / 2;
-  fpt.y = (centroid[0].y + centroid[1].y) / 2 + gray.rows / 3 * 2;
+  frame_pt.x = (centroid[0].x + centroid[1].x) / 2;
+  frame_pt.y = (centroid[0].y + centroid[1].y) / 2 + gray.rows / 3 * 2;
   cvtColor(dst, dst, cv::COLOR_GRAY2BGR);
 
-  cv::circle(frame, fpt, 2, cv::Scalar(0, 0, 255), 2);
+  cv::circle(frame, frame_pt, 2, cv::Scalar(0, 0, 255), 2);
   cv::circle(dst, centroid[0], 2, cv::Scalar(0, 255, 0), 2);
   cv::circle(dst, centroid[1], 2, cv::Scalar(255, 0, 0), 2);
 
-  error = dst.cols / 2 - fpt.x;
+  error = dst.cols / 2 - frame_pt.x;
 
   imshow("frame", frame);
   imshow("dst", dst);
@@ -108,8 +103,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
 
 int main(int argc, char **argv)
 {
-  prevpt1 = cv::Point(110, 60);
-  prevpt2 = cv::Point(620, 60);
+  prev_pt[0] = cv::Point(110, 60);
+  prev_pt[1] = cv::Point(620, 60);
 
   ros::init(argc, argv, AUTOMATE_VEHICLE);
   ros::NodeHandle nodeHandle;
