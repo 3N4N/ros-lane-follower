@@ -21,6 +21,7 @@ std::vector<double> dist[2];
 int error;
 
 double PI = atan(1)*4;
+bool SHOW_FRAME = true;
 
 void imageCallback(const sensor_msgs::ImageConstPtr &msg)
 {
@@ -80,9 +81,11 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
 
   error = dst.cols / 2 - frame_pt.x;
 
-  imshow("frame", frame);
-  imshow("dst", dst);
-  cv::waitKey(1);
+  if (SHOW_FRAME) {
+    imshow("frame", frame);
+    imshow("dst", dst);
+    cv::waitKey(1);
+  }
 
   geometry_msgs::Twist cmd_vel;
   cmd_vel.linear.x = 0.5;
@@ -93,6 +96,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
 
 int main(int argc, char **argv)
 {
+  if (argc == 2 && !strcmp(argv[1], "0")) {
+    SHOW_FRAME = false;
+  }
+
   prev_pt[0] = cv::Point(250, 60);
   prev_pt[1] = cv::Point(650, 60);
 
