@@ -25,25 +25,17 @@ bool SHOW_FRAME = true;
 
 void imageCallback(const sensor_msgs::ImageConstPtr &msg)
 {
-  cv::Mat frame, gray, dst;
+  cv::Mat frame, gray, clipped;
 
   frame = cv_bridge::toCvShare(msg, "bgr8")->image;
   gray = cv_bridge::toCvShare(msg, "mono8")->image;
 
-  // gray = gray + 100 - mean(gray)[0];
   cv::threshold(gray, gray, 160, 255, cv::THRESH_BINARY);
 
-  dst = gray(cv::Rect(0, gray.rows / 3 * 2, gray.cols, gray.rows / 3));
-
-  // cv::imwrite("dst.png", dst);
+  clipped = gray(cv::Rect(0, gray.rows / 3 * 2, gray.cols, gray.rows / 3));
 
   cv::Mat labels, stats, centroids;
-  int cnt = cv::connectedComponentsWithStats(dst, labels, stats, centroids);
-
-  // std::cout << cnt << " ";
-  // std::cout << "\n" << labels << "\n";
-  // std::cout << "\n" << stats << "\n";
-  // std::cout << "\n" << centroids << "\n\n\n";
+  int cnt = cv::connectedComponentsWithStats(clipped, labels, stats, centroids);
 
   // the first componenet is the background layer
   // which will always be present
@@ -72,24 +64,40 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   }
 
   frame_pt.x = (centroid[0].x + centroid[1].x) / 2;
+  frame_pt.x = (centroid[0].x + (centroid[1].x - centroid[0].x) / 3);
   frame_pt.y = (centroid[0].y + centroid[1].y) / 2 + gray.rows / 3 * 2;
-  cvtColor(dst, dst, cv::COLOR_GRAY2BGR);
+  cvtColor(clipped, clipped, cv::COLOR_GRAY2BGR);
 
   cv::circle(frame, frame_pt, 2, cv::Scalar(0, 0, 255), 2);
-  cv::circle(dst, centroid[0], 2, cv::Scalar(0, 255, 0), 2);
-  cv::circle(dst, centroid[1], 2, cv::Scalar(255, 0, 0), 2);
+  cv::circle(clipped, centroid[0], 2, cv::Scalar(0, 255, 0), 2);
+  cv::circle(clipped, centroid[1], 2, cv::Scalar(255, 0, 0), 2);
 
-  error = dst.cols / 2 - frame_pt.x;
+  error = clipped.cols / 2 - frame_pt.x;
 
   if (SHOW_FRAME) {
     imshow("frame", frame);
-    imshow("dst", dst);
+    imshow("clipped", clipped);
     cv::waitKey(1);
   }
 
   geometry_msgs::Twist cmd_vel;
-  cmd_vel.linear.x = 0.5;
-  cmd_vel.angular.z = (error*PI/frame.cols);
+  double x = std::abs(20.0 / error);  // 20 is empirically determined
+  if (x > 0.5) {
+    x = 0.5;
+  }
+  if (x < 0.2) {
+    x = 0.2;
+  }
+  cmd_vel.linear.x = x;
+
+  // The unit is rad/s, so the multiplier is dependent on how much
+  // the angular speed is to be acted upon in this callback.
+  // But we don't know the image publishing rate.
+  // 2 seems to give a good result.
+  cmd_vel.angular.z = (error*PI/gray.cols) * 2;
+
+  // std::cout << error << " " << cmd_vel.angular.z << " ";
+  // std::cout << cmd_vel.linear.x << "\n";
 
   pub.publish(cmd_vel);
 }
