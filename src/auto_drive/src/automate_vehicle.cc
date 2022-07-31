@@ -31,14 +31,14 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   gray = cv_bridge::toCvShare(msg, "mono8")->image;
 
   // gray = gray + 100 - mean(gray)[0];
-  threshold(gray, gray, 160, 255, cv::THRESH_BINARY);
+  cv::threshold(gray, gray, 160, 255, cv::THRESH_BINARY);
 
   dst = gray(cv::Rect(0, gray.rows / 3 * 2, gray.cols, gray.rows / 3));
 
   // cv::imwrite("dst.png", dst);
 
   cv::Mat labels, stats, centroids;
-  int cnt = connectedComponentsWithStats(dst, labels, stats, centroids);
+  int cnt = cv::connectedComponentsWithStats(dst, labels, stats, centroids);
 
   // std::cout << cnt << " ";
   // std::cout << "\n" << labels << "\n";
