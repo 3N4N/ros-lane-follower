@@ -66,15 +66,15 @@ void imageCallback(const sensor_msgs::ImageConstPtr &msg)
   frame_pt.x = (centroid[0].x + centroid[1].x) / 2;
   frame_pt.x = (centroid[0].x + (centroid[1].x - centroid[0].x) / 3);
   frame_pt.y = (centroid[0].y + centroid[1].y) / 2 + gray.rows / 3 * 2;
-  cvtColor(clipped, clipped, cv::COLOR_GRAY2BGR);
-
-  cv::circle(frame, frame_pt, 2, cv::Scalar(0, 0, 255), 2);
-  cv::circle(clipped, centroid[0], 2, cv::Scalar(0, 255, 0), 2);
-  cv::circle(clipped, centroid[1], 2, cv::Scalar(255, 0, 0), 2);
 
   error = clipped.cols / 2 - frame_pt.x;
 
   if (SHOW_FRAME) {
+    cvtColor(clipped, clipped, cv::COLOR_GRAY2BGR);
+    cv::circle(frame, frame_pt, 2, cv::Scalar(0, 0, 255), 2);
+    cv::circle(clipped, centroid[0], 2, cv::Scalar(0, 255, 0), 2);
+    cv::circle(clipped, centroid[1], 2, cv::Scalar(255, 0, 0), 2);
+
     imshow("frame", frame);
     imshow("clipped", clipped);
     cv::waitKey(1);
